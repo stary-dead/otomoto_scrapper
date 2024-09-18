@@ -3,41 +3,83 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import asyncio
 from brand import Brand
+from callbacks import *
+from dotenv import load_dotenv
+import os
 
-API_TOKEN = '7111658600:AAEvvAUuDl5js9cIxkHg9hvgXYsXDEW8JL8'  # Замените на свой токен
-bmw = Brand("BMW", 'bmw')
-models = [{'name': '1M', 'id': '1m'}, {'name': '3GT', 'id': '3gt'}, {'name': '5GT', 'id': '5gt'}, {'name': '6GT', 'id': '6gt'}, {'name': 'i3', 'id': 'i3'}, {'name': 'i4', 'id': 'i4'}, {'name': 'i5', 'id': 'i5'}, {'name': 'i7', 'id': 'i7'}, {'name': 'i8', 'id': 'i8'}, {'name': 'Inny', 'id': 'ix'}, {'name': 'iX', 'id': 'ix1'}, {'name': 'iX1', 'id': 'ix2'}, {'name': 'iX2', 'id': 'ix3'}, {'name': 'iX3', 'id': 'm2'}, {'name': 'M2', 'id': 'm3'}, {'name': 'M3', 'id': 'm4'}, {'name': 'M4', 'id': 'm5'}, {'name': 'M5', 'id': 'm6'}, {'name': 'M6', 'id': 'm8'}, {'name': 'M8', 'id': 'other'}, {'name': 'Seria 1', 'id': 'seria-1'}, {'name': 'Seria 2', 'id': 'seria-2'}, {'name': 'Seria 3', 'id': 'seria-3'}, {'name': 'Seria 4', 'id': 'seria-4'}, {'name': 'Seria 5', 'id': 'seria-5'}, {'name': 'Seria 6', 'id': 'seria-6'}, {'name': 'Seria 7', 'id': 'seria-7'}, {'name': 'Seria 8', 'id': 'seria-8'}, {'name': 'X1', 'id': 'x1'}, {'name': 'X2', 'id': 'x2'}, {'name': 'X3', 'id': 'x3'}, {'name': 'X3 M', 'id': 'x3-m'}, {'name': 'X4', 'id': 
-'x4'}, {'name': 'X4 M', 'id': 'x4-m'}, {'name': 'X5', 'id': 'x5'}, {'name': 'X5 M', 'id': 'x5-m'}, {'name': 'X6', 'id': 'x6'}, {'name': 'X6M', 'id': 'x6-m'}, {'name': 'X7', 'id': 'x7'}, {'name': 'XM', 'id': 'xm'}, {'name': 'Z1', 'id': 'z1'}, {'name': 'Z3', 'id': 'z3'}, {'name': 'Z4', 'id': 'z4'}, {'name': 'Z4 M', 'id': 'z4-m'}, {'name': 'Z8', 'id': 'z8'}]
+load_dotenv()
+API_TOKEN = os.getenv("BOT_API_TOKEN")  # Замените на свой токен
+brands = {
+    "BMW": Brand("BMW", 'bmw', {
+        '1M': '1m', '3GT': '3gt', '5GT': '5gt', '6GT': '6gt', 'i3': 'i3',
+        'i4': 'i4', 'i5': 'i5', 'i7': 'i7', 'i8': 'i8', 'Inny': 'ix',
+        'iX': 'ix1', 'iX1': 'ix2', 'iX2': 'ix3', 'iX3': 'm2', 'M2': 'm3',
+        'M3': 'm4', 'M4': 'm5', 'M5': 'm6', 'M6': 'm8', 'M8': 'other',
+        'Seria 1': 'seria-1', 'Seria 2': 'seria-2', 'Seria 3': 'seria-3',
+        'Seria 4': 'seria-4', 'Seria 5': 'seria-5', 'Seria 6': 'seria-6',
+        'Seria 7': 'seria-7', 'Seria 8': 'seria-8', 'X1': 'x1', 'X2': 'x2',
+        'X3': 'x3', 'X3 M': 'x3-m', 'X4': 'x4', 'X4 M': 'x4-m', 'X5': 'x5',
+        'X5 M': 'x5-m', 'X6': 'x6', 'X6M': 'x6-m', 'X7': 'x7', 'XM': 'xm',
+        'Z1': 'z1', 'Z3': 'z3', 'Z4': 'z4', 'Z4 M': 'z4-m', 'Z8': 'z8'
+    }),
+    "Audi": Brand("Audi", 'audi', {
+        'A1': 'a1', 'A3': 'a3', 'A4': 'a4', 'A5': 'a5', 'A6': 'a6', 'A7': 'a7',
+        'A8': 'a8', 'Q2': 'q2', 'Q3': 'q3', 'Q5': 'q5', 'Q7': 'q7', 'Q8': 'q8',
+        'TT': 'tt', 'R8': 'r8', 'e-tron': 'etron'
+    })
 
-bmw.models = models
+}
 # Инициализация бота и диспетчера
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# Обработчик команды /start
 @dp.message(Command("start"))
 async def send_welcome(message: types.Message):
     # Создание инлайн кнопки
-    inline_btn = InlineKeyboardButton(text='BMW', callback_data='brand_pressed')
-    inline_kb = InlineKeyboardMarkup(inline_keyboard=[[inline_btn]])
+    btns = []
+    for brand in brands.keys():
+        btns.append([InlineKeyboardButton(text=brand, callback_data=BrandCallback(brand=brand).pack())])
+    inline_kb = InlineKeyboardMarkup(inline_keyboard=btns)
 
     # Отправка сообщения с инлайн кнопкой
     await message.answer("Марки авто 🚗:", reply_markup=inline_kb)
 
 # Обработчик нажатия инлайн кнопки
-@dp.callback_query(lambda c: c.data == 'brand_pressed')
-async def process_callback_brand_button(callback_query: types.CallbackQuery):
-    await callback_query.answer()  # Ответ на callback запрос
+@dp.callback_query(BrandCallback.filter())
+async def process_callback_brand_button(callback_query: types.CallbackQuery, callback_data:BrandCallback):
+    await callback_query.answer() 
+    models = get_brand_models(callback_data.brand)
     btns = []
-    for model in bmw.models:
-        btns.append([InlineKeyboardButton(text=model['name'], callback_data=model['name'])])
-    inline_kb = InlineKeyboardMarkup(inline_keyboard=btns)    
-    await bot.send_message(callback_query.from_user.id, 'Ты нажал на кнопку!', reply_markup=inline_kb)
+    if models:
+        for model in models:
+            btns.append([InlineKeyboardButton(text=model, callback_data=ModelCallback(model=model, brand=callback_data.brand).pack())])
+        btns.append([InlineKeyboardButton(text="🔙 Назад к брендам", callback_data="back_to_brands")])
+        inline_kb = InlineKeyboardMarkup(inline_keyboard=btns)    
+        await bot.send_message(callback_query.from_user.id, f"Модельный ряд брэнда {callback_query.data}", reply_markup=inline_kb)
 
-@dp.callback_query(lambda c: True)
-async def process_callback_model_button(callback_query: types.CallbackQuery):
-    selected_model = callback_query.data
-    await bot.send_message(callback_query.from_user.id, selected_model)
+@dp.callback_query(ModelCallback.filter())
+async def process_callback_model_button(callback_query: types.CallbackQuery, callback_data:ModelCallback):
+    await bot.send_message(callback_query.from_user.id, f"Brand: {callback_data.brand}, Model: {callback_data.model}")
     await callback_query.answer()
+
+@dp.callback_query(lambda c: c.data == "back_to_brands")
+async def process_callback_back_to_brands(callback_query: types.CallbackQuery):
+    await callback_query.answer()
+    
+    # Создаем клавиатуру с брендами
+    btns = []
+    for brand in brands.keys():
+        btns.append([InlineKeyboardButton(text=brand, callback_data=BrandCallback(brand=brand).pack())])
+    inline_kb = InlineKeyboardMarkup(inline_keyboard=btns)
+
+    # Отправляем сообщение с выбором брендов
+    await bot.send_message(callback_query.from_user.id, "Марки авто 🚗:", reply_markup=inline_kb)
+
+def get_brand_models(brand_name: str):
+    brand = brands.get(brand_name)
+    if brand:
+        return brand.get_models()
+    else:
+        return None
 if __name__ == '__main__':
     dp.run_polling(bot)
