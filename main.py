@@ -3,12 +3,15 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import asyncio
 from brand import Brand
+from scrapper import Scrapper
 from callbacks import *
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 API_TOKEN = os.getenv("BOT_API_TOKEN")  # Замените на свой токен
+chrome_driver_path = os.getenv("DRIVER_PATH")
+scrapper = Scrapper(chrome_driver_path)
 brands = {
     "BMW": Brand("BMW", 'bmw', {
         '1M': '1m', '3GT': '3gt', '5GT': '5gt', '6GT': '6gt', 'i3': 'i3',
@@ -53,14 +56,35 @@ async def process_callback_brand_button(callback_query: types.CallbackQuery, cal
     if models:
         for model in models:
             btns.append([InlineKeyboardButton(text=model, callback_data=ModelCallback(model=model, brand=callback_data.brand).pack())])
+        btns.append([InlineKeyboardButton(text="Все модели", callback_data=ModelCallback(model="all", brand=callback_data.brand).pack())])
         btns.append([InlineKeyboardButton(text="🔙 Назад к брендам", callback_data="back_to_brands")])
         inline_kb = InlineKeyboardMarkup(inline_keyboard=btns)    
         await bot.send_message(callback_query.from_user.id, f"Модельный ряд брэнда {callback_query.data}", reply_markup=inline_kb)
 
 @dp.callback_query(ModelCallback.filter())
 async def process_callback_model_button(callback_query: types.CallbackQuery, callback_data:ModelCallback):
-    await bot.send_message(callback_query.from_user.id, f"Brand: {callback_data.brand}, Model: {callback_data.model}")
+    brand = brands[callback_data.brand]
     await callback_query.answer()
+    if callback_data.model != "all":
+        articles = scrapper.get_articles(brand.id, brand.models[callback_data.model])
+    else:
+        articles = scrapper.get_articles(brand.id)
+    if articles:
+        for item in articles:
+            image_url = item['image'].replace('320x240', '1280x720')
+            title = item['title']
+            subtitle = item['sub_title']
+            price = item['price']
+            caption=f"""{title}
+
+    {subtitle}
+
+    {price}"""
+            
+            await bot.send_photo(callback_query.from_user.id, image_url, caption=caption)
+            await asyncio.sleep(1)
+        # await bot.send_message(callback_query.from_user.id, f"Brand: {callback_data.brand}, Model: {callback_data.model}")
+    
 
 @dp.callback_query(lambda c: c.data == "back_to_brands")
 async def process_callback_back_to_brands(callback_query: types.CallbackQuery):
@@ -70,6 +94,7 @@ async def process_callback_back_to_brands(callback_query: types.CallbackQuery):
     btns = []
     for brand in brands.keys():
         btns.append([InlineKeyboardButton(text=brand, callback_data=BrandCallback(brand=brand).pack())])
+        
     inline_kb = InlineKeyboardMarkup(inline_keyboard=btns)
 
     # Отправляем сообщение с выбором брендов
