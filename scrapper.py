@@ -23,7 +23,9 @@ class Scrapper:
 
         self.driver = webdriver.Chrome(service=Service(self.driver_path), options=chrome_options)
 
-    def get_articles(self, brand_id, model_id=""):
+    def get_articles(self, brand_id, model_id=None):
+        if not model_id:
+            model_id = ""
         url = f"https://www.otomoto.pl/osobowe/{brand_id}/{model_id}"
 
         if not self.driver:
