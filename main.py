@@ -204,11 +204,10 @@ async def show_article(user_id: int, article, index:int | None):
     
     # Создаем кнопки "Далее" и "Назад"
     btns = []
-    if index:
+    if index is not None:
         if index > 0:
             btns.append(InlineKeyboardButton(text="⬅️ Назад", callback_data="prev_article"))
-        if index < len(article) - 1:
-            btns.append(InlineKeyboardButton(text="➡️ Далее", callback_data="next_article"))
+        btns.append(InlineKeyboardButton(text="➡️ Далее", callback_data="next_article"))
 
         inline_kb = InlineKeyboardMarkup(inline_keyboard=[btns])
         await bot.send_photo(user_id, photo=image_url, caption=caption, reply_markup=inline_kb)

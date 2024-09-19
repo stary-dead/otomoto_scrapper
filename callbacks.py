@@ -8,9 +8,9 @@ class ModelCallback(CallbackData, prefix="model"):
     brand:str
 
 
-class SubscribeBrandCallback(CallbackData, prefix="brand"):
+class SubscribeBrandCallback(CallbackData, prefix="subscribe_brand"):
     brand:str
 
-class SubscribeModelCallback(CallbackData, prefix="model"):
+class SubscribeModelCallback(CallbackData, prefix="subscribe_model"):
     model:str
     brand:str
