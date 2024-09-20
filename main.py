@@ -3,40 +3,19 @@ from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton,InputMediaPhoto
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from brand import Brand
-from scrapper import Scrapper
+from utils.brand import Brand
+from scrappers import OtomotoScrapper
 from callbacks import *
 from dotenv import load_dotenv
 import os
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from collections import defaultdict
-
+from articles import Article
 load_dotenv()
 API_TOKEN = os.getenv("BOT_API_TOKEN")  # Замените на свой токен
-chrome_driver_path = os.getenv("DRIVER_PATH")
-scrapper = Scrapper(chrome_driver_path)
+scrapper = OtomotoScrapper()
 subscriptions = defaultdict(lambda: {"brand": None, "model": None})
-brands = {
-    "BMW": Brand("BMW", 'bmw', {
-        '1M': '1m', '3GT': '3gt', '5GT': '5gt', '6GT': '6gt', 'i3': 'i3',
-        'i4': 'i4', 'i5': 'i5', 'i7': 'i7', 'i8': 'i8', 'Inny': 'ix',
-        'iX': 'ix1', 'iX1': 'ix2', 'iX2': 'ix3', 'iX3': 'm2', 'M2': 'm3',
-        'M3': 'm4', 'M4': 'm5', 'M5': 'm6', 'M6': 'm8', 'M8': 'other',
-        'Seria 1': 'seria-1', 'Seria 2': 'seria-2', 'Seria 3': 'seria-3',
-        'Seria 4': 'seria-4', 'Seria 5': 'seria-5', 'Seria 6': 'seria-6',
-        'Seria 7': 'seria-7', 'Seria 8': 'seria-8', 'X1': 'x1', 'X2': 'x2',
-        'X3': 'x3', 'X3 M': 'x3-m', 'X4': 'x4', 'X4 M': 'x4-m', 'X5': 'x5',
-        'X5 M': 'x5-m', 'X6': 'x6', 'X6M': 'x6-m', 'X7': 'x7', 'XM': 'xm',
-        'Z1': 'z1', 'Z3': 'z3', 'Z4': 'z4', 'Z4 M': 'z4-m', 'Z8': 'z8'
-    }),
-    "Audi": Brand("Audi", 'audi', {
-        'A1': 'a1', 'A3': 'a3', 'A4': 'a4', 'A5': 'a5', 'A6': 'a6', 'A7': 'a7',
-        'A8': 'a8', 'Q2': 'q2', 'Q3': 'q3', 'Q5': 'q5', 'Q7': 'q7', 'Q8': 'q8',
-        'TT': 'tt', 'R8': 'r8', 'e-tron': 'etron'
-    })
-
-}
 storage = MemoryStorage()
 # Инициализация бота и диспетчера
 bot = Bot(token=API_TOKEN)
@@ -77,7 +56,7 @@ async def process_subscribe(callback_query: types.CallbackQuery, state: FSMConte
     await callback_query.answer()
     # Показываем выбор брендов
     btns = []
-    for brand in brands.keys():
+    for brand in scrapper.brands.keys():
         btns.append([InlineKeyboardButton(text=brand, callback_data=SubscribeBrandCallback(brand=brand).pack())])
     inline_kb = InlineKeyboardMarkup(inline_keyboard=btns)
     await bot.send_message(callback_query.from_user.id, "Выберите бренд:", reply_markup=inline_kb)
@@ -111,7 +90,7 @@ async def process_choose_model(callback_query: types.CallbackQuery, callback_dat
 
 # Функция для проверки новых артикулов
 async def check_for_updates(user_id, brand_name, model_name):
-    brand= brands[brand_name]
+    brand= scrapper.brands[brand_name]
     brand_id = brand.id
     model_id = brand.models[model_name] if model_name != "all" else None
     old_articles = await asyncio.to_thread(lambda: scrapper.get_articles(brand_id, model_id))
@@ -119,7 +98,7 @@ async def check_for_updates(user_id, brand_name, model_name):
     while user_id in subscriptions:
         # Получаем новые артикулы
         new_articles = await asyncio.to_thread(lambda: scrapper.get_articles(brand_id, model_id))
-        print(f"{brand_id} {model_id}")
+
         # Сравниваем с предыдущими
         if new_articles and new_articles != old_articles:
             # Отправляем новые артикулы пользователю
@@ -156,7 +135,7 @@ async def process_find_car(callback_query: types.CallbackQuery):
     await callback_query.answer()
     # После нажатия "Найти автомобиль" показываем бренды
     btns = []
-    for brand in brands.keys():
+    for brand in scrapper.brands.keys():
         btns.append([InlineKeyboardButton(text=brand, callback_data=BrandCallback(brand=brand).pack())])
     inline_kb = InlineKeyboardMarkup(inline_keyboard=btns)
     await bot.send_message(callback_query.from_user.id, "Марки авто 🚗:", reply_markup=inline_kb)
@@ -177,7 +156,7 @@ async def process_callback_brand_button(callback_query: types.CallbackQuery, cal
 
 @dp.callback_query(ModelCallback.filter())
 async def process_callback_model_button(callback_query: types.CallbackQuery, callback_data: ModelCallback, state: FSMContext):
-    brand = brands[callback_data.brand]
+    brand = scrapper.brands[callback_data.brand]
     stop_event = asyncio.Event()
     loader_task = asyncio.create_task(show_loader(callback_query, stop_event))
     await callback_query.answer()
@@ -186,20 +165,17 @@ async def process_callback_model_button(callback_query: types.CallbackQuery, cal
         articles = await asyncio.to_thread(lambda: scrapper.get_articles(brand.id, model))
         stop_event.set()
 
-
         if articles:
             # Сохраняем артикулы в состоянии пользователя
             await state.update_data(articles=articles, current_index=0)
             await show_article(callback_query.from_user.id, articles[0], 0)
     finally:
         await loader_task
-        # print(123123)
-
-async def show_article(user_id: int, article, index:int | None):
-    image_url = article['image'].replace('320x240', '1280x720')
-    title = article['title']
-    subtitle = article['sub_title']
-    price = article['price']
+async def show_article(user_id: int, article:Article, index:int | None):
+    image_url = article.main_image.replace('320x240', '1280x720')
+    title = article.title
+    subtitle = article.description
+    price = article.price
     caption = f"{title}\n\n{subtitle}\n\n{price}"
     
     # Создаем кнопки "Далее" и "Назад"
@@ -240,11 +216,11 @@ async def prev_article(callback_query: types.CallbackQuery, state: FSMContext):
         await state.update_data(current_index=current_index)
         await update_article(callback_query.message, articles[current_index], current_index)
 
-async def update_article(message: types.Message, article, index):
-    image_url = article['image'].replace('320x240', '1280x720')
-    title = article['title']
-    subtitle = article['sub_title']
-    price = article['price']
+async def update_article(message: types.Message, article:Article, index):
+    image_url = article.main_image.replace('320x240', '1280x720')
+    title = article.title
+    subtitle = article.description
+    price = article.price
     caption = f"{title}\n\n{subtitle}\n\n{price}"
     
     # Создаем кнопки "Далее" и "Назад"
@@ -265,7 +241,7 @@ async def process_callback_back_to_brands(callback_query: types.CallbackQuery):
     
     # Создаем клавиатуру с брендами
     btns = []
-    for brand in brands.keys():
+    for brand in scrapper.brands.keys():
         btns.append([InlineKeyboardButton(text=brand, callback_data=BrandCallback(brand=brand).pack())])
         
     inline_kb = InlineKeyboardMarkup(inline_keyboard=btns)
@@ -297,7 +273,7 @@ async def show_loader(callback_query: types.CallbackQuery, stop_event: asyncio.E
     await callback_query.answer()
 
 def get_brand_models(brand_name: str):
-    brand = brands.get(brand_name)
+    brand = scrapper.brands.get(brand_name)
     if brand:
         return brand.get_models()
     else:
