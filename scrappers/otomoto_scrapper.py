@@ -25,15 +25,11 @@ class OtomotoScrapper(Scrapper):
         'X5 M': 'x5-m', 'X6': 'x6', 'X6M': 'x6-m', 'X7': 'x7', 'XM': 'xm',
         'Z1': 'z1', 'Z3': 'z3', 'Z4': 'z4', 'Z4 M': 'z4-m', 'Z8': 'z8'
     }),
-    "Audi": Brand("Audi", 'audi', {
-        'A1': 'a1', 'A3': 'a3', 'A4': 'a4', 'A5': 'a5', 'A6': 'a6', 'A7': 'a7',
-        'A8': 'a8', 'Q2': 'q2', 'Q3': 'q3', 'Q5': 'q5', 'Q7': 'q7', 'Q8': 'q8',
-        'TT': 'tt', 'R8': 'r8', 'e-tron': 'etron'
-    })
 
 }
         super().__init__()
-
+    def __str__(self) -> str:
+        return "Otomoto"
     def get_articles(self, brand_id, model_id=None) -> list[OtomotoArticle]:
         if not model_id:
             model_id = ""

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -15,22 +15,19 @@ class Scrapper(ABC):
     def __init__(self):
         os.getenv("DRIVER_PATH")
         self.driver_path = os.getenv("DRIVER_PATH")
-        self.driver: webdriver.Chrome | None = None 
+        self.driver: webdriver.Firefox | None = None 
         self.setup_driver()
 
     def setup_driver(self):
-        """Настройка WebDriver с необходимыми опциями."""
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-        chrome_options.add_argument(
-            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        )
+        firefox_options = Options()
+        firefox_options.add_argument("--headless")
+        firefox_options.add_argument("--no-sandbox")
+        firefox_options.add_argument("--disable-dev-shm-usage")
+        firefox_options.add_argument("--disable-gpu")
+        firefox_options.add_argument("--disable-blink-features=AutomationControlled")
+        firefox_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
 
-        self.driver = webdriver.Chrome(service=Service(self.driver_path), options=chrome_options)
+        self.driver = webdriver.Firefox(service=Service(self.driver_path), options=firefox_options)
 
     def close(self):
         """Закрытие драйвера."""

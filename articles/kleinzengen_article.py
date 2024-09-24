@@ -1,15 +1,17 @@
 from .base import Article
 
-class OtomotoArticle(Article):
-    def __init__(self, title: str, price: str,  main_image: str, mileage: str | None = None, city: str | None = None, image_list: list[str] | None = None, description: str | None = None):
+class KleinzengenArticle(Article):
+    def __init__(self, title: str, price: str,  main_image: str | None = None, mileage: str | None = None, city: str | None = None, image_list: list[str] | None = None, description: str | None = None):
         self._title = title
         self._price = price
         self._city = city
         self._mileage = mileage
-        self._main_image = main_image.replace('320x240', '1280x720')
+        self._main_image = main_image.replace('rule=$_2.JPG', "rule=$_59.JPG") if main_image else None
         self._image_list = image_list
         self._description = description
 
+    def __str__(self) -> str:
+        return super().__str__()
     @property
     def title(self) -> str:
         return self._title

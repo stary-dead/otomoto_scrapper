@@ -2,6 +2,9 @@ from abc import ABC, abstractmethod
 from typing import List
 
 class Article(ABC):
+    def __str__(self) -> str:
+        return "\n".join([self.title, self.price, self.main_image])
+
     @property
     @abstractmethod
     def title(self) -> str:

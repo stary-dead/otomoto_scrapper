@@ -4,7 +4,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton,InputMediaP
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from utils.brand import Brand
-from scrappers import OtomotoScrapper
+from scrappers import OtomotoScrapper, KleinzengenScrapper
 from callbacks import *
 from dotenv import load_dotenv
 import os
@@ -14,7 +14,7 @@ from collections import defaultdict
 from articles import Article
 load_dotenv()
 API_TOKEN = os.getenv("BOT_API_TOKEN")  # Замените на свой токен
-scrapper = OtomotoScrapper()
+scrapper = KleinzengenScrapper()
 subscriptions = defaultdict(lambda: {"brand": None, "model": None})
 storage = MemoryStorage()
 # Инициализация бота и диспетчера
@@ -167,17 +167,19 @@ async def process_callback_model_button(callback_query: types.CallbackQuery, cal
 
         if articles:
             # Сохраняем артикулы в состоянии пользователя
-            await state.update_data(articles=articles, current_index=0)
+            await state.update_data(articles=articles, current_index=0, current_brand_id=brand.id, current_model_id = model, current_page = "1")
             await show_article(callback_query.from_user.id, articles[0], 0)
     finally:
         await loader_task
 async def show_article(user_id: int, article:Article, index:int | None):
-    image_url = article.main_image.replace('320x240', '1280x720')
+    image_url = article.main_image
     title = article.title
     subtitle = article.description
     price = article.price
     caption = f"{title}\n\n{subtitle}\n\n{price}"
     
+
+    print(article)
     # Создаем кнопки "Далее" и "Назад"
     btns = []
     if index is not None:
@@ -196,12 +198,17 @@ async def next_article(callback_query: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     articles = data['articles']
     current_index = data['current_index']
-
-    if current_index < len(articles) - 1:
-        current_index += 1
-    else:
+    current_page = int(data['current_page'])
+    if current_page == 50:
+        current_page = 1
         current_index = 0
-    await state.update_data(current_index=current_index)
+    current_index += 1
+    if current_index >= len(articles) - 1:
+        current_page+=1
+        brand_id = data['current_brand_id']
+        model_id = data['current_model_id']
+        articles+=[item for item in scrapper.get_articles(brand_id=brand_id, model_id=model_id, page = current_page) if item not in articles]
+    await state.update_data(current_index=current_index, current_page=current_page)
     await update_article(callback_query.message, articles[current_index], current_index)
     
 
@@ -250,14 +257,14 @@ async def process_callback_back_to_brands(callback_query: types.CallbackQuery):
     await bot.send_message(callback_query.from_user.id, "Марки авто 🚗:", reply_markup=inline_kb)
 
 async def show_loader(callback_query: types.CallbackQuery, stop_event: asyncio.Event):
-    loading_message = await bot.send_message(callback_query.from_user.id, "⏳ Идет подгрузка объявлений с OTOMOTO. Ожидайте... ⏳")
+    loading_message = await bot.send_message(callback_query.from_user.id, f"⏳ Идет подгрузка объявлений с {scrapper}. Ожидайте... ⏳")
     loader_emojis = ["⏳", "🔄", "⌛", "🔃"]
     
     i = 1
     last_message_text = ""  # Храним последнее сообщение
     while not stop_event.is_set():  # Пока не завершен основной процесс загрузки
         emoji = loader_emojis[i % len(loader_emojis)]  # Меняем эмодзи
-        new_message_text = f"{emoji} Идет подгрузка объявлений с OTOMOTO. Ожидайте... {emoji}"
+        new_message_text = f"{emoji} Идет подгрузка объявлений с {scrapper}. Ожидайте... {emoji}"
 
         if new_message_text != last_message_text:  # Проверяем, изменился ли текст
             await bot.edit_message_text(new_message_text, 
@@ -280,3 +287,4 @@ def get_brand_models(brand_name: str):
         return None
 if __name__ == '__main__':
     dp.run_polling(bot)
+
