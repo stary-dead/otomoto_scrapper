@@ -1,3 +1,3 @@
-from .brand import Brand
+from .brand import Brand, BrandsSerializer
 
-__all__ = ['Brand']
+__all__ = ['Brand', 'BrandsSerializer']

@@ -5,40 +5,20 @@ from selenium.webdriver.support import expected_conditions as EC
 from articles import KleinzengenArticle
 from dotenv import load_dotenv
 from .base import Scrapper
-from utils.brand import Brand
+from utils.brand import Brand, BrandsSerializer
 from bs4 import BeautifulSoup
 load_dotenv()
 
 class KleinzengenScrapper(Scrapper):
     def __init__(self):
-        self._brands = {
-    "BMW": Brand("BMW", 'bmw', {
-        "1er": "1er",
-        "2er": "2er",
-        "3er": "3er",
-        "4er": "4er",
-        "5er": "5er",
-        "6er": "6er",
-        "7er": "7er",
-        "i3": "i3",
-        "i4": "i4",
-        "i8": "i8",
-        "iX": "ix",
-        "iX3": "ix3",
-        "M Reihe": "m_reihe",
-        "X Reihe": "x_reihe",
-        "Z Reihe": "z_reihe",
-        "2002": "2002",
-        "840": "840",
-        "850": "850",
-        "Weitere BMW": "andere"
-        }),
-    }
+
+        with open('kleinzengen_brands.json', 'r', encoding='utf-8') as file:
+            self._brands = BrandsSerializer.deserialize(file.read())
+        
         super().__init__()
     def __str__(self) -> str:
         return "Kleinzengen"
 
-    
     def get_articles(self, brand_id, model_id=None, page = 1) -> list[KleinzengenArticle]:
         url = f"https://www.kleinanzeigen.de/s-autos/{brand_id}/seite:{page}/c216+autos.marke_s:{brand_id}"
         if model_id:

@@ -9,6 +9,7 @@ import time, os
 from dotenv import load_dotenv
 from .base import Scrapper
 from utils.brand import Brand
+from bs4 import BeautifulSoup
 load_dotenv()
 class OtomotoScrapper(Scrapper):
     def __init__(self):
@@ -64,17 +65,25 @@ class OtomotoScrapper(Scrapper):
             self.setup_driver()
 
         self.driver.get(url)
-        time.sleep(3)
+        time.sleep(3)  # ожидание загрузки страницы
 
-        articles_container = self.driver.find_element(By.CLASS_NAME, 'ooa-r53y0q.eupw8r111')
-        titles = []
-        articles = articles_container.find_elements(By.TAG_NAME, 'div')
-        for child in articles:
-            title_list = child.find_elements(By.TAG_NAME, 'h1')
-            if title_list:
-                titles.append(title_list[0].text)
+        # Получаем HTML-код страницы
+        page_source = self.driver.page_source
 
-        return titles
+        # Передаем HTML-код в BeautifulSoup
+        soup = BeautifulSoup(page_source, 'html.parser')
+
+        # Ищем нужный <ul> блок
+        ul_block = soup.find('ul', class_='browsebox-itemlist treelist')
+
+        if ul_block:
+            # Получаем текст всех дочерних <li> элементов
+            li_items = ul_block.find_all('li')
+            for li in li_items:
+                print(li.get_text(strip=True))  # выводим текст каждого <li>
+        else:
+            print("Блок <ul> не найден")
+            return titles
 
     def close(self):
         if self.driver:
@@ -87,7 +96,7 @@ class OtomotoScrapper(Scrapper):
 if __name__ == "__main__":
     chrome_driver_path = os.getenv("DRIVER_PATH")
     scrapper = Scrapper(chrome_driver_path)
-    titles = scrapper.scrape_page("https://www.otomoto.pl/osobowe/bmw")
+    titles = scrapper.scrape_page("https://www.kleinanzeigen.de/s-autos/volkswagen/c216+autos.marke_s:volkswagen")
     
     print(titles)
     scrapper.close()

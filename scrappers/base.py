@@ -6,6 +6,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from articles import Article
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 import os
 from dotenv import load_dotenv
 
@@ -26,6 +27,13 @@ class Scrapper(ABC):
         firefox_options.add_argument("--disable-gpu")
         firefox_options.add_argument("--disable-blink-features=AutomationControlled")
         firefox_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+
+        # Создаем профиль Firefox и указываем путь к нему
+        profile_path = "C:/Users/stary/AppData/Local/Mozilla/Firefox/Profiles/eii072yg.default-release"
+        firefox_profile = FirefoxProfile(profile_path)
+
+        # Подключаем профиль к опциям браузера
+        firefox_options.profile = firefox_profile
 
         self.driver = webdriver.Firefox(service=Service(self.driver_path), options=firefox_options)
 
