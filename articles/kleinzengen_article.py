@@ -1,7 +1,15 @@
 from .base import Article
-
+from aiogram.types import InputFile
 class KleinzengenArticle(Article):
-    def __init__(self, title: str, price: str,  main_image: str | None = None, mileage: str | None = None, city: str | None = None, image_list: list[str] | None = None, description: str | None = None):
+    def __init__(self, 
+                 title: str, 
+                 price: str,  
+                 main_image: str | InputFile | None = None, 
+                 mileage: str | None = None, 
+                 city: str | None = None, 
+                 image_list: list[str] | None = None, 
+                 description: str | None = None):
+        
         self._title = title
         self._price = price
         self._city = city

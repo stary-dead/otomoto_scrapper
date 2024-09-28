@@ -29,7 +29,7 @@ class KleinzengenScrapper(Scrapper):
         
         # Ожидание полной загрузки страницы
         WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, 'article.aditem'))
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'li.ad-listitem'))
         )
         
         # Получаем HTML страницы
@@ -63,8 +63,14 @@ class KleinzengenScrapper(Scrapper):
             
             # Ссылка на изображение
             image_element = article.select_one('div.aditem-image img')
-            image_url = image_element['src'] if image_element else "No image"
+            if image_element:
+                image_url = image_element['src']
+            else:
+                image_url = "https://sesupport.edumall.jp/hc/article_attachments/900009570963/noImage.jpg"
             
+            if title == "No title" and description == "No description":
+                print(article)
+                continue
             item = KleinzengenArticle(title=title, price=price, main_image=image_url, mileage=mileage, description=f"{year}\n{description}")
             results.append(item)
 

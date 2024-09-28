@@ -77,6 +77,7 @@ async def update_article(message: types.Message, article:Article, index):
     inline_kb = InlineKeyboardMarkup(inline_keyboard=[btns])
 
     # Редактируем сообщение (фото и подпись)
+
     media = InputMediaPhoto(media=image_url, caption=caption)
     await message.edit_media(media=media, reply_markup=inline_kb)
 
