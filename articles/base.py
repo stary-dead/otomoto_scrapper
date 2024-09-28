@@ -4,7 +4,12 @@ from typing import List
 class Article(ABC):
     def __str__(self) -> str:
         return "\n".join([self.title, self.price, self.main_image])
-
+    
+    def __eq__(self, other):
+        if isinstance(other, Article):
+            return self.title == other.title and self.main_image == other.main_image 
+    def __hash__(self):
+        return hash((self.title, self.main_image))
     @property
     @abstractmethod
     def title(self) -> str:

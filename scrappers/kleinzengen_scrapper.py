@@ -37,13 +37,14 @@ class KleinzengenScrapper(Scrapper):
         
         # Используем BeautifulSoup для парсинга
         soup = BeautifulSoup(page_source, 'html.parser')
-        articles = soup.select('article.aditem')
-        
+        articles = soup.select('li.ad-listitem')
+        exclude_classes = {"is-highlight", "badge-topad","is-topad"}
         results = []
-        print(len(articles))
         
         for article in articles: 
-            # Заголовок
+            article_classes = set(article.get('class', []))
+            if article_classes & exclude_classes:  # Проверяет пересечение классов
+                continue 
             title_element = article.select_one('h2.text-module-begin > a.ellipsis')
             title = title_element.text.strip() if title_element else "No title"
             
