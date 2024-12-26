@@ -51,3 +51,9 @@ class Article(ABC):
     def description(self) -> str:
         """Описание артикула"""
         pass
+
+    @property
+    @abstractmethod
+    def url(self) -> str:
+        """Описание артикула"""
+        pass

@@ -1,5 +1,5 @@
 from .base import Scrapper
 from .otomoto_scrapper import OtomotoScrapper
-from .kleinzengen_scrapper import KleinzengenScrapper
+from .kleinzengen_scrapper import KleinzengenScrapper, KleinzengenScrapperMock
 
-__all__ = ['Scrapper', 'OtomotoScrapper', 'KleinzengenScrapper']
+__all__ = ['Scrapper', 'OtomotoScrapper', 'KleinzengenScrapper', 'KleinzengenScrapperMock']

@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from .base import Scrapper
 from utils.brand import Brand, BrandsSerializer
 from bs4 import BeautifulSoup
+from filters import KleinzengenFilter
+
 load_dotenv()
 
 class KleinzengenScrapper(Scrapper):
@@ -19,12 +21,12 @@ class KleinzengenScrapper(Scrapper):
     def __str__(self) -> str:
         return "Kleinzengen"
 
-    def get_articles(self, brand_id, model_id=None, page = 1) -> list[KleinzengenArticle]:
-        url = f"https://www.kleinanzeigen.de/s-autos/{brand_id}/seite:{page}/c216+autos.marke_s:{brand_id}"
-        if model_id:
-            url += "+autos.model_s:" + model_id
+    def get_articles(self, user_filter:KleinzengenFilter, page=1) -> list[KleinzengenArticle]:
+        user_filter._page = page
+        url = user_filter.get_web_url
 
-        print(url)
+
+        # print(url)
         self.driver.get(url)
         
         # Ожидание полной загрузки страницы
@@ -67,11 +69,16 @@ class KleinzengenScrapper(Scrapper):
                 image_url = image_element['src']
             else:
                 image_url = "https://sesupport.edumall.jp/hc/article_attachments/900009570963/noImage.jpg"
-            
-            if title == "No title" and description == "No description":
-                print(article)
+            article_tag = article.select_one('article')
+            if article_tag:
+                data_href = article_tag.get('data-href', 'No href')
+                article_url = f"https://www.kleinanzeigen.de{data_href}" if data_href != 'No href' else None
+            else:
+                article_url = None
+            if not article_url:
                 continue
-            item = KleinzengenArticle(title=title, price=price, main_image=image_url, mileage=mileage, description=f"{year}\n{description}")
+             
+            item = KleinzengenArticle(title=title, price=price, main_image=image_url, mileage=mileage, description=f"{year}\n{description}", url=article_url)
             results.append(item)
 
         
@@ -84,9 +91,62 @@ class KleinzengenScrapper(Scrapper):
     @property
     def brands(self)->dict[str, Brand]:
         return self._brands
-
-if __name__ == "__main__":
-    scrapper = KleinzengenScrapper()
-    titles = scrapper.get_articles()
     
-    scrapper.close()
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from .base import Scrapper
+from utils.brand import Brand, BrandsSerializer
+from articles import KleinzengenArticle
+import random
+
+load_dotenv()
+
+class KleinzengenScrapperMock(Scrapper):
+    def __init__(self):
+        with open('kleinzengen_brands.json', 'r', encoding='utf-8') as file:
+            self._brands = BrandsSerializer.deserialize(file.read())
+        
+        # super().__init__()
+
+    def __str__(self) -> str:
+        return "Kleinzengen"
+
+    def get_articles(self, user_filter:KleinzengenFilter, page=1) -> list[KleinzengenArticle]:
+        # Возвращаем моковые данные
+        mock_articles = []
+        # url = await user_filter.get_web_url(page=page)
+        # print(url)
+        for i in range(10):  # Генерируем 10 моковых статей
+            mock_articles.append(
+                KleinzengenArticle(
+                    title=f"Mock Car {user_filter.brand} {i}",
+                    price=f"{random.randint(5000, 50000)} €",
+                    main_image="https://sesupport.edumall.jp/hc/article_attachments/900009570963/noImage.jpg",
+                    mileage=f"{random.randint(10000, 200000)} km",
+                    description=f"Year: {2020 - random.randint(0, 10)}\nMock description for car {i}",
+                    url= user_filter.get_web_url
+                )
+            )
+        return mock_articles
+
+    def close(self):
+        # Метод оставляем, чтобы соответствовать интерфейсу, но ничего не делаем
+        pass
+
+    @property
+    def brands(self) -> dict[str, Brand]:
+        return self._brands
+
+# if __name__ == "__main__":
+#     scrapper = KleinzengenScrapper()
+#     articles = scrapper.get_articles(brand_id="mock_brand", model_id="mock_model", page=1)
+#     for article in articles:
+#         print(article)
+#     scrapper.close()
+
+
+# if __name__ == "__main__":
+#     scrapper = KleinzengenScrapper()
+#     titles = scrapper.get_articles()
+    
+#     scrapper.close()

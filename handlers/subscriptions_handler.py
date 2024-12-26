@@ -1,14 +1,14 @@
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
-from scrappers import KleinzengenScrapper
+from scrappers import KleinzengenScrapper, KleinzengenScrapperMock
 from collections import defaultdict
 from utils.brand import Brand
 from articles import Article
 from callbacks import SubscribeBrandCallback, SubscribeModelCallback, BrandCallback
 import asyncio
 
-scrapper = KleinzengenScrapper()
+scrapper = KleinzengenScrapperMock()
 subscriptions = defaultdict(lambda: {"brand": None, "model": None})
 
 def register_handlers(dp):
@@ -77,9 +77,9 @@ async def check_for_updates(bot, user_id, brand_name, model_name):
                 if article not in old_articles:
                     await show_article(user_id, article, bot, None)
             
-            print(old_articles)
-            print('\n'*3)
-            print(new_articles)
+            # print(old_articles)
+            # print('\n'*3)
+            # print(new_articles)
             old_articles = new_articles
 
         # Ждем 10 минут перед следующей проверкой

@@ -8,15 +8,17 @@ class KleinzengenArticle(Article):
                  mileage: str | None = None, 
                  city: str | None = None, 
                  image_list: list[str] | None = None, 
-                 description: str | None = None):
+                 description: str | None = None,
+                 url: str | None = None):
         
         self._title = title
         self._price = price
         self._city = city
         self._mileage = mileage
-        self._main_image = main_image.replace('rule=$_2.JPG', "rule=$_59.JPG") if main_image else None
+        self._main_image = main_image.replace('rule=$_2.JPG', "rule=$_20.JPG") if main_image else None
         self._image_list = image_list
         self._description = description
+        self._url = url
 
     def __str__(self) -> str:
         return super().__str__()
@@ -47,3 +49,7 @@ class KleinzengenArticle(Article):
     @property
     def description(self) -> str:
         return self._description
+    
+    @property
+    def url(self) -> str:
+        return self._url
