@@ -13,11 +13,11 @@ load_dotenv()
 
 class KleinzengenScrapper(Scrapper):
     def __init__(self):
-
         with open('kleinzengen_brands.json', 'r', encoding='utf-8') as file:
             self._brands = BrandsSerializer.deserialize(file.read())
         
-        super().__init__()
+        # Явно указываем, что хотим использовать Selenium
+        super().__init__(use_selenium=True)
     def __str__(self) -> str:
         return "Kleinzengen"
 
@@ -106,7 +106,8 @@ class KleinzengenScrapperMock(Scrapper):
         with open('kleinzengen_brands.json', 'r', encoding='utf-8') as file:
             self._brands = BrandsSerializer.deserialize(file.read())
         
-        # super().__init__()
+        # Не используем Selenium в моке
+        super().__init__(use_selenium=False)
 
     def __str__(self) -> str:
         return "Kleinzengen"

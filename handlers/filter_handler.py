@@ -1,7 +1,7 @@
 from aiogram import types
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputMediaPhoto, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
-from scrappers import KleinzengenScrapper,KleinzengenScrapperMock
+from scrappers import KleinzengenRequestsScrapper, KleinzengenScrapperMock
 from articles import Article
 from callbacks import BrandCallback, ModelCallback
 import asyncio

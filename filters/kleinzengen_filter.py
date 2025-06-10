@@ -54,35 +54,63 @@ class KleinzengenFilter:
 
         if transmission in self.TRANSMISSION_CHOICES:
             self._transmission = self.TRANSMISSION_CHOICES[transmission]
-        
         if city in self.CITY_CHOICES:
             self._city = city
-    @property
+            
     def get_web_url(self)->str:
-        brand_id = self.brand['brand_id'] if self.brand != "all" else None
-        url = "https://www.kleinanzeigen.de/s-autos/"
-        year = None
-        if brand_id:
-            url+=brand_id+"/"
-            brand_id = "autos.marke_s:"+brand_id
-        city_code = self.CITY_CHOICES[self.city] if self.city else None
+        try:
+            if not self.brand:
+                raise ValueError("Бренд не указан в фильтре")
+                
+            if not isinstance(self.brand, dict):
+                raise ValueError(f"Неверный формат бренда: {type(self.brand)}, ожидается dict")
+                
+            if 'brand_id' not in self.brand:
+                raise ValueError(f"В бренде отсутствует ключ 'brand_id'. Доступные ключи: {self.brand.keys()}")
+            
+            brand_id = self.brand['brand_id']
+            if not brand_id:
+                raise ValueError("ID бренда не может быть пустым")
+                
+            url = "https://www.kleinanzeigen.de/s-autos/"
+            year = None
+            
+            # Добавляем ID бренда в URL
+            url += brand_id + "/"
+            brand_param = "autos.marke_s:" + brand_id
+            
+            # Обрабатываем город
+            city_code = self.CITY_CHOICES[self.city] if self.city else None
+            if self.city:
+                url += self.city.lower() + "/"
 
-        if self.city:
-            url+=self.city.lower()+"/"
-
-        if self.price:
-            url+=f"preis:{self.price}/"
-        if self.year:
-            years = self.year.replace(':', "%2C")
-            year = f"autos.ez_i:{years}"
-        url+=f"seite:{self.page}/"
-        # self.page = page
-
-        url+=f"c216l{city_code}" if self.city else "c216"
-        model_id = f"autos.model_s:{self.brand['model_id']}" if self.brand and self.brand['model_id'] != "all" else None
-        url="+".join([x for x in [url,brand_id, self.transmission, model_id, year] if x!= None])
-
-        return url
+            # Добавляем другие параметры фильтра
+            if self.price:
+                url += f"preis:{self.price}/"
+            if self.year:
+                years = self.year.replace(':', "%2C")
+                year = f"autos.ez_i:{years}"
+                
+            # Добавляем номер страницы
+            url += f"seite:{self.page}/"
+            
+            # Добавляем код города
+            url += f"c216l{city_code}" if self.city else "c216"
+            
+            # Добавляем ID модели, если она указана
+            model_id = None
+            if 'model_id' in self.brand and self.brand['model_id']:
+                model_id = f"autos.model_s:{self.brand['model_id']}"
+                
+            # Соединяем все части URL
+            url = "+".join([x for x in [url, brand_param, self.transmission, model_id, year] if x is not None])
+            
+            return url
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Ошибка при формировании URL в фильтре: {e}")
+            raise ValueError(f"Не удалось создать URL для фильтра: {e}")
         
     @property
     def page(self) -> int:
