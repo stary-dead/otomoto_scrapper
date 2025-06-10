@@ -35,7 +35,7 @@ def register_handlers(dp):
     dp.callback_query.register(show_subscription_filters, lambda c: c.data == "show_sub_filters")
     dp.callback_query.register(process_subscription_filter, SubscribeFilterCallback.filter())
     dp.callback_query.register(back_to_subscription, SubFilterBackCallback.filter())
-    dp.callback_query.register(update_subscription_filter, lambda c: c.data == "update_sub_filters")
+    # Убрана строка с update_subscription_filter, так как такая функция не существует
     dp.callback_query.register(clear_subscription_filters, lambda c: c.data == "clear_sub_filters")
     
     # Обработчики ввода для фильтров
@@ -493,6 +493,32 @@ async def show_subscription_filters(callback_query: types.CallbackQuery, state: 
         filter_description, 
         reply_markup=filters_kb
     )
+async def clear_subscription_filters(callback_query: types.CallbackQuery, state: FSMContext):
+    """Очищает все фильтры подписки"""
+    bot = callback_query.bot
+    user_id = callback_query.from_user.id
+    await callback_query.answer()
+    
+    # Очищаем фильтры в состоянии
+    user_filter = KleinzengenFilter()
+    await state.update_data(sub_filter=user_filter)
+    
+    # Если пользователь уже подписан, обновляем фильтр в подписке
+    if user_id in subscriptions:
+        subscription_info = subscriptions[user_id]
+        brand_name = subscription_info["brand"]
+        model_name = subscription_info["model"]
+        subscriptions[user_id]["filter"] = None
+        
+        await bot.send_message(
+            user_id,
+            f"Все фильтры для подписки на {brand_name} {model_name} очищены ✅"
+        )
+    else:
+        await bot.send_message(user_id, "Все фильтры очищены ✅")
+    
+    # Показываем обновленное меню фильтров
+    await show_subscription_filters_direct(bot, user_id, state)
     
 async def process_subscription_filter(callback_query: types.CallbackQuery, callback_data: SubscribeFilterCallback, state: FSMContext):
     """Обрабатывает выбор фильтра"""
@@ -557,10 +583,11 @@ async def process_subscription_filter(callback_query: types.CallbackQuery, callb
             subscription_info = subscriptions[user_id]
             brand_name = subscription_info["brand"]
             model_name = subscription_info["model"]
-            subscriptions[user_id]["filter"] = user_filter
+            subscriptions[user_id]["filter"] = None
+            
             await bot.send_message(
                 user_id,
-                f"Фильтры для подписки на {brand_name} {model_name} были очищены."
+                f"Все фильтры для подписки на {brand_name} {model_name} очищены ✅"
             )
         
     elif filter_type == "save":
@@ -694,17 +721,9 @@ async def handle_sub_transmission_input(message: types.Message, state: FSMContex
         await state.update_data(sub_filter=user_filter)
         
         await message.answer(f"Выбрана трансмиссия: {user_input} ✅", reply_markup=ReplyKeyboardRemove())
-        await show_subscription_filters(
-            types.CallbackQuery(
-                id="dummy_id",
-                from_user=message.from_user,
-                chat_instance="dummy_chat",
-                message=message,
-                data="show_sub_filters"
-            ),
-            state
-        )
-        await state.clear()
+        
+        # Вызываем функцию напрямую с ботом БЕЗ очистки состояния
+        await show_subscription_filters_direct(message.bot, message.from_user.id, state)
     else:
         await message.answer("Пожалуйста, выберите из предложенного: Автомат или Механика.")
 
@@ -722,17 +741,9 @@ async def handle_sub_fuel_input(message: types.Message, state: FSMContext):
         await state.update_data(sub_filter=user_filter)
         
         await message.answer(f"Выбран тип топлива: {user_input} ✅", reply_markup=ReplyKeyboardRemove())
-        await show_subscription_filters(
-            types.CallbackQuery(
-                id="dummy_id",
-                from_user=message.from_user,
-                chat_instance="dummy_chat",
-                message=message,
-                data="show_sub_filters"
-            ),
-            state
-        )
-        await state.clear()
+        
+        # Вызываем функцию напрямую с ботом БЕЗ очистки состояния
+        await show_subscription_filters_direct(message.bot, message.from_user.id, state)
     else:
         await message.answer("Пожалуйста, выберите из предложенного списка.")
 
@@ -755,17 +766,9 @@ async def handle_sub_price_input(message: types.Message, state: FSMContext):
         await state.update_data(sub_filter=user_filter)
         
         await message.answer(f"Установлена цена: {user_input} €✅", reply_markup=ReplyKeyboardRemove())
-        await show_subscription_filters(
-            types.CallbackQuery(
-                id="dummy_id",
-                from_user=message.from_user,
-                chat_instance="dummy_chat",
-                message=message,
-                data="show_sub_filters"
-            ),
-            state
-        )
-        await state.clear()
+        
+        # Вызываем функцию напрямую с ботом БЕЗ очистки состояния
+        await show_subscription_filters_direct(message.bot, message.from_user.id, state)
     else:
         await message.answer("Пожалуйста, введите корректный диапазон цен.")
 
@@ -788,17 +791,9 @@ async def handle_sub_mileage_input(message: types.Message, state: FSMContext):
         await state.update_data(sub_filter=user_filter)
         
         await message.answer(f"Установлен пробег: {user_input} км✅", reply_markup=ReplyKeyboardRemove())
-        await show_subscription_filters(
-            types.CallbackQuery(
-                id="dummy_id",
-                from_user=message.from_user,
-                chat_instance="dummy_chat",
-                message=message,
-                data="show_sub_filters"
-            ),
-            state
-        )
-        await state.clear()
+        
+        # Вызываем функцию напрямую с ботом БЕЗ очистки состояния
+        await show_subscription_filters_direct(message.bot, message.from_user.id, state)
     else:
         await message.answer("Пожалуйста, введите корректный диапазон пробега.")
 
@@ -821,17 +816,9 @@ async def handle_sub_year_input(message: types.Message, state: FSMContext):
         await state.update_data(sub_filter=user_filter)
         
         await message.answer(f"Установлен год выпуска: {user_input} ✅", reply_markup=ReplyKeyboardRemove())
-        await show_subscription_filters(
-            types.CallbackQuery(
-                id="dummy_id",
-                from_user=message.from_user,
-                chat_instance="dummy_chat",
-                message=message,
-                data="show_sub_filters"
-            ),
-            state
-        )
-        await state.clear()
+        
+        # Вызываем функцию напрямую с ботом БЕЗ очистки состояния
+        await show_subscription_filters_direct(message.bot, message.from_user.id, state)
     else:
         await message.answer("Пожалуйста, введите корректный диапазон годов выпуска.")
 
@@ -849,81 +836,59 @@ async def handle_sub_city_input(message: types.Message, state: FSMContext):
         await state.update_data(sub_filter=user_filter)
         
         await message.answer(f"Выбран город: {user_input} ✅", reply_markup=ReplyKeyboardRemove())
-        await show_subscription_filters(
-            types.CallbackQuery(
-                id="dummy_id",
-                from_user=message.from_user,
-                chat_instance="dummy_chat",
-                message=message,
-                data="show_sub_filters"
-            ),
-            state
-        )
-        await state.clear()
+        
+        # Вызываем функцию напрямую с ботом БЕЗ очистки состояния
+        await show_subscription_filters_direct(message.bot, message.from_user.id, state)
     else:
         await message.answer("Пожалуйста, выберите город из предложенного списка.")
 
-async def update_subscription_filter(callback_query: types.CallbackQuery, state: FSMContext):
-    """Обновляет фильтр для текущей активной подписки пользователя"""
-    bot = callback_query.bot
-    user_id = callback_query.from_user.id
+async def show_subscription_filters_direct(bot, user_id: int, state: FSMContext):
+    """Показывает доступные фильтры для подписки (прямой вызов без callback_query)"""
     
-    await callback_query.answer()
+    # Получаем данные о текущем фильтре, если они есть
+    state_data = await state.get_data()
+    user_filter: KleinzengenFilter = state_data.get("sub_filter")
     
-    if user_id not in subscriptions:
-        await bot.send_message(
-            user_id, 
-            "У вас нет активных подписок для настройки фильтров.\n"
-            "Сначала оформите подписку на интересующую вас модель автомобиля."
-        )
-        return
+    # Подготавливаем описание текущих фильтров
+    filter_description = "Текущие фильтры:\n"
+    has_filters = False
     
-    # Получаем данные о текущей подписке
-    subscription_info = subscriptions[user_id]
-    brand = subscription_info["brand"]
-    model = subscription_info["model"]
-    current_filter = subscription_info.get("filter")
+    if user_filter:
+        if user_filter.transmission:
+            filter_description += f"✓ Трансмиссия: {user_filter.transmission}\n"
+            has_filters = True
+        if user_filter.fuel:
+            filter_description += f"✓ Топливо: {user_filter.fuel}\n"
+            has_filters = True
+        if user_filter.price:
+            filter_description += f"✓ Цена: {user_filter.price}\n"
+            has_filters = True
+        if user_filter.milleage:
+            filter_description += f"✓ Пробег: {user_filter.milleage}\n"
+            has_filters = True
+        if user_filter.year:
+            filter_description += f"✓ Год: {user_filter.year}\n"
+            has_filters = True
+        if user_filter.city:
+            filter_description += f"✓ Город: {user_filter.city}\n"
+            has_filters = True
+            
+    if not has_filters:
+        filter_description = "В данный момент фильтры не установлены. Выберите фильтры ниже:"
     
-    # Сохраняем бренд и модель в состоянии
-    await state.update_data(subscribe_brand=brand, subscribe_model=model, sub_filter=current_filter)
-    
-    # Показываем экран настройки фильтров
-    await show_subscription_filters(callback_query, state)
-
-async def clear_subscription_filters(callback_query: types.CallbackQuery, state: FSMContext):
-    """Очищает все фильтры для текущей подписки"""
-    bot = callback_query.bot
-    user_id = callback_query.from_user.id
-    
-    await callback_query.answer()
-    
-    if user_id not in subscriptions:
-        await bot.send_message(
-            user_id, 
-            "У вас нет активных подписок для очистки фильтров."
-        )
-        return
-        
-    # Получаем данные о текущей подписке
-    subscription_info = subscriptions[user_id]
-    brand = subscription_info["brand"]
-    model = subscription_info["model"]
-    
-    # Создаем новый пустой фильтр
-    user_filter = KleinzengenFilter()
-    
-    # Обновляем подписку без фильтров
-    subscriptions[user_id] = {"brand": brand, "model": model, "filter": user_filter}
-    
-    # Отправляем сообщение об успешной очистке
-    await bot.send_message(
-        user_id,
-        f"Все фильтры для подписки на {brand} {model} были очищены.\n"
-        f"Теперь вы будете получать уведомления обо всех объявлениях этой модели без фильтрации."
+    # Создаем клавиатуру для фильтров
+    filters_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🔄 Трансмиссия", callback_data=SubscribeFilterCallback(filter_type="transmission").pack())],
+            [InlineKeyboardButton(text="⛽ Топливо", callback_data=SubscribeFilterCallback(filter_type="fuel").pack())],
+            [InlineKeyboardButton(text="💰 Цена", callback_data=SubscribeFilterCallback(filter_type="price").pack())],
+            [InlineKeyboardButton(text="🛣️ Пробег", callback_data=SubscribeFilterCallback(filter_type="mileage").pack())],
+            [InlineKeyboardButton(text="📅 Год выпуска", callback_data=SubscribeFilterCallback(filter_type="year").pack())],
+            [InlineKeyboardButton(text="🏙️ Город", callback_data=SubscribeFilterCallback(filter_type="city").pack())],
+            [InlineKeyboardButton(text="🗑️ Очистить фильтры", callback_data=SubscribeFilterCallback(filter_type="clear").pack())],
+            [InlineKeyboardButton(text="💾 Сохранить фильтры", callback_data=SubscribeFilterCallback(filter_type="save").pack())],
+            [InlineKeyboardButton(text="🔙 Назад", callback_data=SubFilterBackCallback().pack())]
+        ]
     )
     
-    # Сохраняем пустой фильтр в состоянии
-    await state.update_data(sub_filter=user_filter)
-    
-    # Перезапускаем мониторинг с новыми параметрами
-    asyncio.create_task(check_for_updates(bot, user_id, brand, model))
+    await bot.send_message(user_id, filter_description, reply_markup=filters_kb)
