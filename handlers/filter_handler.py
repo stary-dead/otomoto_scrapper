@@ -56,9 +56,8 @@ async def handle_city_input(message:types.Message, state: FSMContext):
     if user_input in user_filter.CITY_CHOICES.keys():
         user_filter._city = user_input
         await state.update_data(filter=user_filter)  # Сохраняем данные
-        
         await message.answer(f"Вы выбрали город: {user_input.capitalize()} ✅", reply_markup=ReplyKeyboardRemove())
-        await show_filters_from_message(message=message)
+        await show_filters_from_message(message=message, state=state)
         await state.clear()
         await state.update_data(filter=user_filter)
     else:
@@ -95,9 +94,8 @@ async def handle_year_input(message:types.Message, state: FSMContext):
             answer = ':'+user_input
         user_filter._year = answer
         await state.update_data(filter=user_filter)  # Сохраняем данные
-        
         await message.answer(f"Вы выбрали год: {user_input.capitalize()} ✅", reply_markup=ReplyKeyboardRemove())
-        await show_filters_from_message(message=message)
+        await show_filters_from_message(message=message, state=state)
         await state.clear()
         await state.update_data(filter=user_filter)
     else:
@@ -124,9 +122,8 @@ async def handle_mileage_input(message:types.Message, state: FSMContext):
             answer = ':'+user_input
         user_filter._milleage = answer
         await state.update_data(filter=user_filter)  # Сохраняем данные
-        
         await message.answer(f"Вы выбрали пробег: {user_input.capitalize()} км ✅", reply_markup=ReplyKeyboardRemove())
-        await show_filters_from_message(message=message)
+        await show_filters_from_message(message=message, state=state)
         await state.clear()
         await state.update_data(filter=user_filter)
     else:
@@ -153,9 +150,8 @@ async def handle_price_input(message:types.Message, state: FSMContext):
             answer = ':'+user_input
         user_filter._price = answer
         await state.update_data(filter=user_filter)  # Сохраняем данные
-        
         await message.answer(f"Вы выбрали цену: {user_input.capitalize()} евро✅", reply_markup=ReplyKeyboardRemove())
-        await show_filters_from_message(message=message)
+        await show_filters_from_message(message=message, state=state)
         await state.clear()
         await state.update_data(filter=user_filter)
     else:
@@ -175,11 +171,10 @@ async def handle_fuel_input(message:types.Message, state: FSMContext):
     state_data = await state.get_data()
     user_filter: KleinzengenFilter = state_data.get("filter")
     if user_input in user_filter.FUEL_CHOICES.keys():
-        user_filter._fuel = user_input
+        user_filter._fuel = user_filter.FUEL_CHOICES[user_input]
         await state.update_data(filter=user_filter)  # Сохраняем данные
-        
         await message.answer(f"Вы выбрали топливо: {user_input.capitalize()} ✅", reply_markup=ReplyKeyboardRemove())
-        await show_filters_from_message(message=message)
+        await show_filters_from_message(message=message, state=state)
         await state.clear()
         await state.update_data(filter=user_filter)
     else:
@@ -222,11 +217,10 @@ async def handle_transmission_input(message: types.Message, state: FSMContext):
     state_data = await state.get_data()
     user_filter: KleinzengenFilter = state_data.get("filter")
     if user_input in user_filter.TRANSMISSION_CHOICES.keys():
-        user_filter._transmission = user_input
+        user_filter._transmission = user_filter.TRANSMISSION_CHOICES[user_input]
         await state.update_data(filter=user_filter)  # Сохраняем данные
-        
         await message.answer(f"Вы выбрали трансмиссию: {user_input.capitalize()} ✅", reply_markup=ReplyKeyboardRemove())
-        await show_filters_from_message(message=message)
+        await show_filters_from_message(message=message, state=state)
         await state.clear()
         await state.update_data(filter=user_filter)
     else:
@@ -279,11 +273,54 @@ async def apply_filters(callback_query: types.CallbackQuery, state: FSMContext):
     finally:
         await loader_task
 
+def format_applied_filters(user_filter: KleinzengenFilter) -> str:
+    """Форматирует примененные фильтры для отображения пользователю"""
+    filters_text = []
+    
+    if user_filter.transmission:
+        # Находим ключ по значению в TRANSMISSION_CHOICES
+        for key, value in user_filter.TRANSMISSION_CHOICES.items():
+            if value == user_filter.transmission:
+                filters_text.append(f"🔧 Трансмиссия: {key}")
+                break
+    
+    if user_filter.fuel:
+        # Находим ключ по значению в FUEL_CHOICES  
+        for key, value in user_filter.FUEL_CHOICES.items():
+            if value == user_filter.fuel:
+                filters_text.append(f"⛽ Топливо: {key}")
+                break
+    
+    if user_filter.price:
+        price_display = user_filter.price.replace(':', ' - ') if ':' in user_filter.price else f"до {user_filter.price}"
+        filters_text.append(f"💰 Цена: {price_display} евро")
+    
+    if user_filter.milleage:
+        mileage_display = user_filter.milleage.replace(':', ' - ') if ':' in user_filter.milleage else f"до {user_filter.milleage}"
+        filters_text.append(f"🛣️ Пробег: {mileage_display} км")
+    
+    if user_filter.year:
+        year_display = user_filter.year.replace(':', ' - ') if ':' in user_filter.year else f"до {user_filter.year}"
+        filters_text.append(f"📅 Год: {year_display}")
+    
+    if user_filter.city:
+        filters_text.append(f"📍 Город: {user_filter.city}")
+    
+    if not filters_text:
+        return "❌ Фильтры не применены"
+    
+    return "✅ Примененные фильтры:\n" + "\n".join(filters_text)
+
 async def show_filters(callback_query: types.CallbackQuery, state:FSMContext):
     bot = callback_query.bot
     await callback_query.answer()
 
-
+    # Получаем текущие фильтры
+    state_data = await state.get_data()
+    user_filter: KleinzengenFilter = state_data.get("filter")
+    
+    # Формируем текст с примененными фильтрами
+    filters_info = format_applied_filters(user_filter) if user_filter else "❌ Фильтры не применены"
 
     filters_kb = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -299,10 +336,19 @@ async def show_filters(callback_query: types.CallbackQuery, state:FSMContext):
         ]
     )
 
-    # Отправляем сообщение с клавиатурой
-    await bot.send_message(callback_query.from_user.id, "Выберите фильтры:", reply_markup=filters_kb)
+    # Отправляем сообщение с клавиатурой и информацией о фильтрах
+    message_text = f"Выберите фильтры:\n\n{filters_info}"
+    await bot.send_message(callback_query.from_user.id, message_text, reply_markup=filters_kb)
 
-async def show_filters_from_message(message:types.Message):
+async def show_filters_from_message(message:types.Message, state: FSMContext = None):
+    # Получаем текущие фильтры из состояния, если оно передано
+    filters_info = "❌ Фильтры не применены"
+    if state:
+        state_data = await state.get_data()
+        user_filter: KleinzengenFilter = state_data.get("filter")
+        if user_filter:
+            filters_info = format_applied_filters(user_filter)
+    
     filters_kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text = "Фильтр по трансмиссии", callback_data="filter_transmission")],
@@ -317,5 +363,5 @@ async def show_filters_from_message(message:types.Message):
         ]
     )
 
-
-    await message.answer("Вы можете настроить следующие фильтры.", reply_markup=filters_kb)
+    message_text = f"Вы можете настроить следующие фильтры.\n\n{filters_info}"
+    await message.answer(message_text, reply_markup=filters_kb)

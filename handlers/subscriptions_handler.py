@@ -715,9 +715,8 @@ async def handle_sub_transmission_input(message: types.Message, state: FSMContex
     
     if not user_filter:
         user_filter = KleinzengenFilter()
-    
     if user_input in user_filter.TRANSMISSION_CHOICES.keys():
-        user_filter._transmission = user_input
+        user_filter._transmission = user_filter.TRANSMISSION_CHOICES[user_input]
         await state.update_data(sub_filter=user_filter)
         
         await message.answer(f"Выбрана трансмиссия: {user_input} ✅", reply_markup=ReplyKeyboardRemove())
@@ -735,9 +734,8 @@ async def handle_sub_fuel_input(message: types.Message, state: FSMContext):
     
     if not user_filter:
         user_filter = KleinzengenFilter()
-    
     if user_input in user_filter.FUEL_CHOICES.keys():
-        user_filter._fuel = user_input
+        user_filter._fuel = user_filter.FUEL_CHOICES[user_input]
         await state.update_data(sub_filter=user_filter)
         
         await message.answer(f"Выбран тип топлива: {user_input} ✅", reply_markup=ReplyKeyboardRemove())
