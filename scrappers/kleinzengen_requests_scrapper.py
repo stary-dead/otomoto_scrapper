@@ -46,12 +46,13 @@ class KleinzengenRequestsScrapper(Scrapper):
             with open('kleinzengen_brands.json', 'r', encoding='utf-8') as file:
                 self._brands = BrandsSerializer.deserialize(file.read())
                 logger.info("Бренды успешно загружены из файла")
-            
-            # Инициализируем сессию requests
+              # Инициализируем сессию requests
             self.session = requests.Session()
+            # Установка таймаутов для сессии
+            self.timeout = (10, 30)  # (connect timeout, read timeout)
             # Установка базовых заголовков для всех запросов
             self.update_headers()
-            logger.debug("Сессия requests инициализирована")
+            logger.debug("Сессия requests инициализирована с таймаутами")
             
             # Явно указываем, что мы не используем Selenium
             super().__init__
@@ -106,31 +107,73 @@ class KleinzengenRequestsScrapper(Scrapper):
             delay = random.uniform(1, 3)
             logger.debug(f"Задержка перед запросом: {delay:.2f} сек")
             time.sleep(delay)
-            
-            # Выполняем запрос
+              # Выполняем запрос
             logger.debug(f"Выполнение GET-запроса к {url}")
-            response = self.session.get(url)
-            response.raise_for_status()  # Проверка на ошибки HTTP
-              # Используем BeautifulSoup для парсинга
+            try:
+                response = self.session.get(url, timeout=self.timeout)
+                logger.info(f"Статус ответа: {response.status_code}")
+                logger.debug(f"Заголовки ответа: {dict(response.headers)}")
+                
+                response.raise_for_status()  # Проверка на ошибки HTTP
+                
+                # Логируем информацию о содержимом
+                content_length = len(response.text)
+                logger.info(f"Получен ответ, размер содержимого: {content_length} символов")
+                
+                # Логируем начало содержимого для диагностики
+                preview = response.text[:500] if response.text else "Пустой ответ"
+                logger.debug(f"Превью содержимого: {preview}...")
+                
+            except requests.exceptions.Timeout:
+                logger.error(f"Таймаут при запросе к {url}")
+                return []
+            except requests.exceptions.ConnectionError:
+                logger.error(f"Ошибка соединения при запросе к {url}")
+                return []
+            except requests.exceptions.HTTPError as e:
+                logger.error(f"HTTP ошибка {response.status_code} при запросе к {url}: {e}")
+                # Логируем содержимое ошибки если оно есть
+                if hasattr(e, 'response') and e.response:
+                    error_content = e.response.text[:1000] if e.response.text else "Нет содержимого"
+                    logger.debug(f"Содержимое ошибки: {error_content}")
+                return []
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Общая ошибка запроса к {url}: {e}")
+                return []              # Используем BeautifulSoup для парсинга
             soup = BeautifulSoup(response.text, 'html.parser')            
             articles = soup.select('li.ad-listitem')
+            
+            logger.info(f"Найдено {len(articles)} элементов статей на странице")
             
             # Если не удалось найти элементы, возможно, нас заблокировали
             if not articles:
                 logger.warning("Не удалось найти элементы. Возможно, запрос был заблокирован.")
-                return []  # Возвращаем пустой список вместо None
+                # Логируем структуру страницы для диагностики
+                page_title = soup.find('title')
+                title_text = page_title.text if page_title else "Заголовок не найден"
+                logger.debug(f"Заголовок страницы: {title_text}")
                 
-            # Парсим статьи
+                # Проверяем на наличие капчи или других блокировок
+                if "captcha" in response.text.lower() or "blocked" in response.text.lower():
+                    logger.warning("Обнаружена возможная капча или блокировка")
+                
+                return []  # Возвращаем пустой список вместо None
+                  # Парсим статьи
             result = []
-            for article_html in articles:
+            logger.debug("Начинаем парсинг найденных статей")
+            for i, article_html in enumerate(articles, 1):
                 try:
+                    logger.debug(f"Парсинг статьи {i}/{len(articles)}")
                     article = self._parse_article(article_html)
                     if article:
                         result.append(article)
+                        logger.debug(f"Статья {i} успешно обработана: {article.title[:50]}...")
+                    else:
+                        logger.debug(f"Статья {i} пропущена (реклама или ошибка парсинга)")
                 except Exception as e:
-                    logger.error(f"Ошибка при парсинге статьи: {e}")
+                    logger.error(f"Ошибка при парсинге статьи {i}: {e}")
             
-            logger.info(f"Получено {len(result)} статей")
+            logger.info(f"Успешно обработано {len(result)} из {len(articles)} статей")
             return result
         except Exception as e:
             logger.error(f"Произошла ошибка при выполнении запроса: {e}")
